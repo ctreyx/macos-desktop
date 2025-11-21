@@ -1,69 +1,69 @@
-# macOS Desktop Experience in Vue 3
+# Vue 3 macOS 桌面体验
 
-A beautiful and functional macOS desktop simulation built with Vue 3, TypeScript, and Vite.
+基于 Vue 3、TypeScript 和 Vite 构建的精美且功能齐全的 macOS 桌面模拟。
 
-## Features
+## ✨ 功能特性
 
-### 🖥️ Desktop Environment
-- **Realistic Dock**: Animated dock with magnification effect.
-- **Menu Bar**: Functional clock, control center, and system menus.
-- **Window Management**: Draggable, resizable, and minimizable windows.
-- **Context Menu**: Custom right-click menu with system actions.
-- **Spotlight Search**: Quick access overlay.
-- **Control Center**: Quick toggles for Wi-Fi, Bluetooth, and sliders for Display/Sound.
+### 🖥️ 桌面环境
+- **逼真的 Dock 栏**：带有放大效果的动画 Dock 栏。
+- **菜单栏**：功能齐全的时钟、控制中心和系统菜单。
+- **窗口管理**：支持拖拽、调整大小和最小化窗口。
+- **右键菜单**：带有系统操作的自定义右键菜单。
+- **聚焦搜索 (Spotlight)**：快速访问覆盖层。
+- **控制中心**：Wi-Fi、蓝牙的快速切换，以及显示器/声音的调节滑块。
 
-### 🌐 Internationalization (i18n)
-- **Bilingual Support**: Seamless switching between English and Chinese (Simplified).
-- **Global State**: Language preference persists across the system (Menu Bar, Apps, Context Menus).
+### 🌐 国际化 (i18n)
+- **双语支持**：无缝切换英文和中文（简体）。
+- **全局状态**：语言偏好在整个系统中持久化（菜单栏、应用程序、右键菜单）。
 
-### 📱 Applications
+### 📱 应用程序
 
-#### 🌤️ Weather
-- **Real-time Data**: Fetches current weather conditions.
-- **Location Detection**: Automatically detects and displays your city name (using Reverse Geocoding).
-- **Dynamic Backgrounds**: Changes based on weather conditions (Sunny, Rainy, Cloudy, etc.).
+#### 🌤️ 天气
+- **实时数据**：获取当前天气状况。
+- **位置检测**：自动检测并显示您的城市名称（使用反向地理编码）。
+- **动态背景**：根据天气状况（晴天、雨天、多云等）变化。
 
-#### 🎮 Games Center
-- **Snake**: Classic snake game.
-- **Minesweeper**: Classic puzzle game with flagging support.
-- **Tetris**: Fully functional Tetris implementation.
+#### 🎮 游戏中心
+- **贪吃蛇**：经典贪吃蛇游戏。
+- **扫雷**：支持插旗的经典益智游戏。
+- **俄罗斯方块**：功能齐全的俄罗斯方块实现。
 
-#### 📂 Finder
-- Browse through a simulated file system.
+#### 📂 访达 (Finder)
+- 浏览模拟的文件系统。
 
-## 🛠️ Tech Stack
-- **Vue 3** (Composition API, Script Setup)
+## 🛠️ 技术栈
+- **Vue 3** (组合式 API, Script Setup)
 - **TypeScript**
 - **Vite**
-- **date-fns** (Time formatting)
+- **date-fns** (时间格式化)
 
-## 🚀 Getting Started
+## 🚀 快速开始
 
-### Prerequisites
-- Node.js (v16 or higher)
+### 前置要求
+- Node.js (v16 或更高版本)
 
-### Installation
+### 安装步骤
 
-1. Clone the repository
+1. 克隆仓库
    ```bash
    git clone https://github.com/ctreyx/macos-desktop.git
    cd macos-desktop
    ```
 
-2. Install dependencies
+2. 安装依赖
    ```bash
    npm install
    ```
 
-3. Run development server
+3. 启动开发服务器
    ```bash
    npm run dev
    ```
 
-4. Build for production
+4. 构建生产版本
    ```bash
    npm run build
    ```
 
-## 📄 License
+## 📄 许可证
 MIT
