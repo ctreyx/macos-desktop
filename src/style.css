@@ -1,0 +1,63 @@
+:root {
+  /* macOS Colors */
+  --mac-bg: #e6e6e6;
+  --mac-dock-bg: rgba(255, 255, 255, 0.2);
+  --mac-dock-border: rgba(255, 255, 255, 0.2);
+  --mac-menu-bg: rgba(255, 255, 255, 0.5);
+  --mac-window-bg: rgba(255, 255, 255, 0.85);
+  --mac-text: #000000;
+  --mac-text-secondary: #666666;
+  --mac-accent: #007aff;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.15);
+  
+  /* Blur */
+  --blur-md: blur(12px);
+  --blur-lg: blur(20px);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  /* macOS style gradient background (Monterey/Big Sur inspired) */
+  background: linear-gradient(225deg, #FF3CAC 0%, #784BA0 50%, #2B86C5 100%);
+  background-size: 200% 200%;
+  animation: gradientBG 15s ease infinite;
+  height: 100vh;
+  width: 100vw;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.3);
+}
