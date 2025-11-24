@@ -7,10 +7,13 @@ import Safari from './components/apps/Safari.vue'
 import Maps from './components/apps/Maps.vue'
 import Games from './components/apps/Games/index.vue'
 import Weather from './components/apps/Weather.vue'
+import Settings from './components/apps/Settings/index.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { useI18n } from './composables/useI18n'
 
 const { t } = useI18n()
+
+const currentWallpaper = ref('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')
 
 interface WindowState {
   id: string
@@ -148,7 +151,7 @@ const openWindow = (id: string) => {
 </script>
 
 <template>
-  <div class="desktop" @contextmenu.prevent="handleContextMenu">
+  <div class="desktop" :style="{ backgroundImage: `url(${currentWallpaper})` }" @contextmenu.prevent="handleContextMenu">
     <MenuBar />
     
     <div class="windows-container">
@@ -247,12 +250,7 @@ const openWindow = (id: string) => {
             <Weather />
           </div>
           <div v-else-if="win.id === 'settings'" class="settings-content">
-             <div class="settings-list">
-               <div class="setting-item">General</div>
-               <div class="setting-item">Display</div>
-               <div class="setting-item">Sound</div>
-               <div class="setting-item">Network</div>
-             </div>
+             <Settings :wallpaper="currentWallpaper" @update:wallpaper="currentWallpaper = $event" />
           </div>
           <div v-else>
             {{ win.content }}
@@ -341,6 +339,10 @@ const openWindow = (id: string) => {
   width: 100vw;
   position: relative;
   overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.5s ease;
 }
 
 /* Launchpad Styles */
@@ -470,15 +472,8 @@ const openWindow = (id: string) => {
 
 /* Settings Styles */
 .settings-content {
-  padding: 10px;
-}
-.setting-item {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-}
-.setting-item:hover {
-  background: #f9f9f9;
+  height: 100%;
+  background: #fff;
 }
 
 /* Messages Styles */

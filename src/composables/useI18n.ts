@@ -71,6 +71,36 @@ const translations = {
       cleanUp: 'Clean Up',
       cleanUpBy: 'Clean Up By',
       showViewOptions: 'Show View Options'
+    },
+    settings: {
+      title: 'Settings',
+      general: 'General',
+      wallpaper: 'Wallpaper',
+      display: 'Display',
+      desktopWallpaper: 'Desktop Wallpaper',
+      currentDesktop: 'Current Desktop',
+      defaultWallpapers: 'Default Wallpapers',
+      customWallpaper: 'Custom Wallpaper',
+      uploadImage: 'Upload Image',
+      supportedFormats: 'Supported formats: JPG, PNG, WebP',
+      settings: 'Settings',
+      underConstruction: 'This section is under construction.'
+    },
+    maps: {
+      search: 'Search location...',
+      navigation: 'Navigation',
+      start: 'Start Point',
+      end: 'End Point',
+      go: 'Go',
+      duration: 'Duration',
+      distance: 'Distance',
+      instructions: 'Instructions'
+    },
+    safari: {
+      search: 'Search or enter website name',
+      back: 'Back',
+      forward: 'Forward',
+      refresh: 'Refresh'
     }
   },
   zh: {
@@ -141,6 +171,36 @@ const translations = {
       cleanUp: '整理',
       cleanUpBy: '整理方式',
       showViewOptions: '查看显示选项'
+    },
+    settings: {
+      title: '设置',
+      general: '通用',
+      wallpaper: '壁纸',
+      display: '显示器',
+      desktopWallpaper: '桌面壁纸',
+      currentDesktop: '当前桌面',
+      defaultWallpapers: '默认壁纸',
+      customWallpaper: '自定义壁纸',
+      uploadImage: '上传图片',
+      supportedFormats: '支持格式：JPG, PNG, WebP',
+      settings: '设置',
+      underConstruction: '该部分正在建设中。'
+    },
+    maps: {
+      search: '搜索地点...',
+      navigation: '导航',
+      start: '起点',
+      end: '终点',
+      go: '出发',
+      duration: '时间',
+      distance: '距离',
+      instructions: '路线指引'
+    },
+    safari: {
+      search: '搜索或输入网站名称',
+      back: '后退',
+      forward: '前进',
+      refresh: '刷新'
     }
   }
 }
