@@ -29,7 +29,8 @@ const isResizing = ref(false)
 const isMaximized = ref(false)
 const preMaximizeState = ref({ x: 0, y: 0, width: 0, height: 0 })
 const dragOffset = ref({ x: 0, y: 0 })
-const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 })
+const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0, left: 0, top: 0 })
+const resizeDirection = ref('')
 
 // Local position state to handle dragging smoothly without waiting for parent update
 const localX = ref(props.x)
@@ -37,8 +38,8 @@ const localY = ref(props.y)
 const localWidth = ref(props.width || 600)
 const localHeight = ref(props.height || 400)
 
-watch(() => props.x, (newX) => { if (!isDragging.value) localX.value = newX })
-watch(() => props.y, (newY) => { if (!isDragging.value) localY.value = newY })
+watch(() => props.x, (newX) => { if (!isDragging.value && !isResizing.value) localX.value = newX })
+watch(() => props.y, (newY) => { if (!isDragging.value && !isResizing.value) localY.value = newY })
 watch(() => props.width, (newW) => { if (!isResizing.value && newW) localWidth.value = newW })
 watch(() => props.height, (newH) => { if (!isResizing.value && newH) localHeight.value = newH })
 
@@ -66,6 +67,9 @@ const toggleMaximize = () => {
 
 const startDrag = (e: MouseEvent) => {
   if (!windowRef.value || isMaximized.value) return
+  // Only drag if clicking title bar directly, not buttons
+  if ((e.target as HTMLElement).closest('.traffic-lights')) return
+  
   isDragging.value = true
   dragOffset.value = {
     x: e.clientX - localX.value,
@@ -93,15 +97,18 @@ const stopDrag = () => {
   emit('update:y', localY.value)
 }
 
-const startResize = (e: MouseEvent) => {
+const startResize = (e: MouseEvent, direction: string) => {
   if (isMaximized.value) return
   e.stopPropagation()
   isResizing.value = true
+  resizeDirection.value = direction
   resizeStart.value = {
     x: e.clientX,
     y: e.clientY,
     width: localWidth.value,
-    height: localHeight.value
+    height: localHeight.value,
+    left: localX.value,
+    top: localY.value
   }
   emit('focus', props.id)
   window.addEventListener('mousemove', onResize)
@@ -112,12 +119,33 @@ const onResize = (e: MouseEvent) => {
   if (!isResizing.value) return
   const deltaX = e.clientX - resizeStart.value.x
   const deltaY = e.clientY - resizeStart.value.y
+  const direction = resizeDirection.value
   
-  const newWidth = Math.max(300, resizeStart.value.width + deltaX)
-  const newHeight = Math.max(200, resizeStart.value.height + deltaY)
+  let newWidth = resizeStart.value.width
+  let newHeight = resizeStart.value.height
+  let newX = resizeStart.value.left
+  let newY = resizeStart.value.top
+
+  // Handle Width and X (Left side resizing affects X)
+  if (direction.includes('w')) {
+    newWidth = Math.max(300, resizeStart.value.width - deltaX)
+    newX = resizeStart.value.left + (resizeStart.value.width - newWidth)
+  } else if (direction.includes('e')) {
+    newWidth = Math.max(300, resizeStart.value.width + deltaX)
+  }
+
+  // Handle Height and Y (Top side resizing affects Y)
+  if (direction.includes('n')) {
+    newHeight = Math.max(200, resizeStart.value.height - deltaY)
+    newY = resizeStart.value.top + (resizeStart.value.height - newHeight)
+  } else if (direction.includes('s')) {
+    newHeight = Math.max(200, resizeStart.value.height + deltaY)
+  }
   
   localWidth.value = newWidth
   localHeight.value = newHeight
+  localX.value = newX
+  localY.value = newY
 }
 
 const stopResize = () => {
@@ -126,6 +154,8 @@ const stopResize = () => {
   window.removeEventListener('mouseup', stopResize)
   emit('update:width', localWidth.value)
   emit('update:height', localHeight.value)
+  emit('update:x', localX.value)
+  emit('update:y', localY.value)
 }
 
 onUnmounted(() => {
@@ -174,7 +204,18 @@ onUnmounted(() => {
     <div class="content">
       <slot></slot>
     </div>
-    <div class="resize-handle" @mousedown="startResize" v-if="!isMaximized"></div>
+    
+    <!-- Resize Handles -->
+    <template v-if="!isMaximized">
+      <div class="resize-handle n" @mousedown="startResize($event, 'n')"></div>
+      <div class="resize-handle s" @mousedown="startResize($event, 's')"></div>
+      <div class="resize-handle e" @mousedown="startResize($event, 'e')"></div>
+      <div class="resize-handle w" @mousedown="startResize($event, 'w')"></div>
+      <div class="resize-handle ne" @mousedown="startResize($event, 'ne')"></div>
+      <div class="resize-handle nw" @mousedown="startResize($event, 'nw')"></div>
+      <div class="resize-handle se" @mousedown="startResize($event, 'se')"></div>
+      <div class="resize-handle sw" @mousedown="startResize($event, 'sw')"></div>
+    </template>
   </div>
 </template>
 
@@ -288,13 +329,18 @@ onUnmounted(() => {
 
 .resize-handle {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 15px;
-  height: 15px;
-  cursor: nwse-resize;
   z-index: 10;
 }
+
+.resize-handle.n { top: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.resize-handle.s { bottom: -3px; left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.resize-handle.e { top: 0; right: -3px; bottom: 0; width: 6px; cursor: ew-resize; }
+.resize-handle.w { top: 0; left: -3px; bottom: 0; width: 6px; cursor: ew-resize; }
+
+.resize-handle.ne { top: -3px; right: -3px; width: 12px; height: 12px; cursor: nesw-resize; z-index: 11; }
+.resize-handle.nw { top: -3px; left: -3px; width: 12px; height: 12px; cursor: nwse-resize; z-index: 11; }
+.resize-handle.se { bottom: -3px; right: -3px; width: 12px; height: 12px; cursor: nwse-resize; z-index: 11; }
+.resize-handle.sw { bottom: -3px; left: -3px; width: 12px; height: 12px; cursor: nesw-resize; z-index: 11; }
 
 .window.transparent {
   background: transparent;
