@@ -364,13 +364,16 @@ const getUserLocation = (isStartPoint = false) => {
 }
 
 .sidebar {
-  width: 260px;
-  background: #f5f5f7;
-  border-right: 1px solid #d2d2d7;
+  width: 280px;
+  background: linear-gradient(180deg, #fafafa 0%, #f2f6f9 100%);
+  border-right: 1px solid #e6e9ee;
   display: flex;
   flex-direction: column;
-  padding: 12px;
+  padding: 14px;
+  gap: 10px;
   z-index: 1; /* Ensure sidebar is above map if needed */
+  box-shadow: 0 6px 24px rgba(20,20,20,0.06);
+  border-radius: 10px 0 0 10px;
 }
 
 .search-bar {
@@ -500,8 +503,9 @@ const getUserLocation = (isStartPoint = false) => {
 
 .nav-header h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
 }
 
 .close-btn {
@@ -522,22 +526,34 @@ const getUserLocation = (isStartPoint = false) => {
 
 .stat-card {
   background: white;
-  padding: 15px;
-  border-radius: 10px;
+  padding: 12px;
+  border-radius: 12px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 6px 20px rgba(2,6,23,0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
+.stat-card:hover { transform: translateY(-3px); }
 
 .stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1d1d1f;
-  margin-bottom: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f1724;
+  margin-bottom: 6px;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #86868b;
+  color: #6b7280;
+}
+
+.loading { color: #9aa2ac; font-size: 12px; margin-top: 10px; }
+
+.distance-card {
+  grid-column: 1 / -1;
+  padding: 14px 8px;
+  border-radius: 12px;
+  background: #f8fbff;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.02);
 }
 
 .instruction {
