@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
-const currentLang = ref<'en' | 'zh'>('en')
+const savedLang = localStorage.getItem('language') as 'en' | 'zh'
+const currentLang = ref<'en' | 'zh'>(savedLang || 'en')
 
 const translations = {
   en: {
@@ -247,6 +248,7 @@ export function useI18n() {
 
   const toggleLang = () => {
     currentLang.value = currentLang.value === 'en' ? 'zh' : 'en'
+    localStorage.setItem('language', currentLang.value)
   }
 
   return {
