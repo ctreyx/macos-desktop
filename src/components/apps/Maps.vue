@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from '../../composables/useI18n'
 import 'ol/ol.css'
 import Map from 'ol/Map'
 import View from 'ol/View'
@@ -11,8 +12,9 @@ import Point from 'ol/geom/Point'
 import Polyline from 'ol/format/Polyline'
 import { Vector as VectorLayer } from 'ol/layer'
 import { Vector as VectorSource } from 'ol/source'
-import { Style, Circle, Fill, Stroke } from 'ol/style'
+import { Style, Stroke } from 'ol/style'
 
+const { t } = useI18n()
 const searchQuery = ref('')
 const mapContainer = ref<HTMLDivElement | null>(null)
 let map: Map | null = null
@@ -21,201 +23,17 @@ let routeLayer: VectorLayer<VectorSource> | null = null
 
 // Navigation State
 const isNavigating = ref(false)
-const routeInfo = ref<{ distance: string, duration: string } | null>(null)
+const selectedMode = ref<'driving' | 'cycling' | 'walking'>('driving')
+const routeInfo = ref<{
+  distance: string,
+  durations: { driving?: string, cycling?: string, walking?: string },
+  arrivalTimes: { driving?: string, cycling?: string, walking?: string }
+} | null>(null)
+const routeGeometries = ref<{ driving?: string | null, cycling?: string | null, walking?: string | null }>({ driving: null, cycling: null, walking: null })
 const startPoint = ref<[number, number] | null>(null) // Lon, Lat
 const endPoint = ref<[number, number] | null>(null)   // Lon, Lat
 const isSelectingEnd = ref(false)
-
-const locations = [
-  { name: 'Apple Park', coords: { lat: 37.3349, lon: -122.0090 }, type: '🏠', label: 'Home' },
-  { name: 'San Francisco', coords: { lat: 37.7749, lon: -122.4194 }, type: '💼', label: 'Work' },
-  { name: 'New York', coords: { lat: 40.7128, lon: -74.0060 }, type: '📍', label: 'New York' },
-  { name: 'London', coords: { lat: 51.5074, lon: -0.1278 }, type: '📍', label: 'London' },
-  { name: 'Tokyo', coords: { lat: 35.6762, lon: 139.6503 }, type: '📍', label: 'Tokyo' },
-  { name: 'Paris', coords: { lat: 48.8566, lon: 2.3522 }, type: '📍', label: 'Paris' }
-]
-
-onMounted(() => {
-  if (mapContainer.value) {
-    map = new Map({
-      target: mapContainer.value,
-      layers: [
-        new TileLayer({
-          source: new OSM()
-        })
-      ],
-      view: new View({
-        center: fromLonLat([locations[0].coords.lon, locations[0].coords.lat]),
-        zoom: 12
-      })
-    })
-
-    // Initialize user location layer
-    const source = new VectorSource()
-    userLocationLayer = new VectorLayer({
-      source: source,
-      style: new Style({
-        image: new Circle({
-          radius: 8,
-          fill: new Fill({ color: '#3399CC' }),
-          stroke: new Stroke({ color: '#fff', width: 2 })
-        })
-      })
-    })
-    
-    // Initialize route layer
-    const routeSource = new VectorSource()
-    routeLayer = new VectorLayer({
-      source: routeSource,
-      style: new Style({
-        stroke: new Stroke({
-          color: '#007aff',
-          width: 5
-        })
-      })
-    })
-
-    map.addLayer(routeLayer)
-    map.addLayer(userLocationLayer)
-
-    // Map click handler for destination selection
-    map.on('click', (e) => {
-      if (isSelectingEnd.value && map) {
-        const coords = toLonLat(e.coordinate)
-        endPoint.value = [coords[0], coords[1]]
-        
-        // Add marker for destination
-        if (routeLayer) {
-          const source = routeLayer.getSource()
-          if (source) {
-            // Clear previous destination markers but keep route if exists? No, clear all for new selection
-            // Actually we should keep the route if we are just updating the point, but for simplicity clear first
-            // source.clear() 
-            
-            // We will redraw everything in calculateRoute, but here just show the marker
-            const feature = new Feature({
-              geometry: new Point(e.coordinate)
-            })
-            feature.setStyle(new Style({
-              image: new Circle({
-                radius: 6,
-                fill: new Fill({ color: '#FF3B30' }),
-                stroke: new Stroke({ color: '#fff', width: 2 })
-              })
-            }))
-            source.addFeature(feature)
-          }
-        }
-        
-        isSelectingEnd.value = false
-        if (startPoint.value) {
-          calculateRoute()
-        }
-      }
-    })
-  }
-})
-
-onUnmounted(() => {
-  if (map) {
-    map.setTarget(undefined)
-    map = null
-  }
-})
-
-const startNavigationMode = () => {
-  isNavigating.value = true
-  isSelectingEnd.value = true
-  // Try to get user location as start point
-  getUserLocation(true)
-}
-
-const cancelNavigation = () => {
-  isNavigating.value = false
-  routeInfo.value = null
-  startPoint.value = null
-  endPoint.value = null
-  if (routeLayer) {
-    routeLayer.getSource()?.clear()
-  }
-}
-
-const calculateRoute = async () => {
-  if (!startPoint.value || !endPoint.value) return
-
-  const start = startPoint.value
-  const end = endPoint.value
-  
-  try {
-    const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=polyline`
-    )
-    const data = await response.json()
-    
-    if (data.code === 'Ok' && data.routes.length > 0) {
-      const route = data.routes[0]
-      const geometry = route.geometry
-      const distance = (route.distance / 1000).toFixed(1) + ' km'
-      const duration = Math.round(route.duration / 60) + ' min'
-      
-      routeInfo.value = { distance, duration }
-      
-      // Draw route
-      if (routeLayer) {
-        const source = routeLayer.getSource()
-        if (source) {
-          source.clear()
-          
-          // Add Start Point
-          const startFeature = new Feature({
-            geometry: new Point(fromLonLat(start))
-          })
-          startFeature.setStyle(new Style({
-            image: new Circle({
-              radius: 6,
-              fill: new Fill({ color: '#34C759' }),
-              stroke: new Stroke({ color: '#fff', width: 2 })
-            })
-          }))
-          source.addFeature(startFeature)
-
-          // Add End Point
-          const endFeature = new Feature({
-            geometry: new Point(fromLonLat(end))
-          })
-          endFeature.setStyle(new Style({
-            image: new Circle({
-              radius: 6,
-              fill: new Fill({ color: '#FF3B30' }),
-              stroke: new Stroke({ color: '#fff', width: 2 })
-            })
-          }))
-          source.addFeature(endFeature)
-
-          // Add Route Line
-          const format = new Polyline({
-            factor: 1e5
-          })
-          const routeFeature = format.readFeature(geometry, {
-            dataProjection: 'EPSG:4326',
-            featureProjection: 'EPSG:3857'
-          })
-          
-          source.addFeature(routeFeature)
-          
-          // Fit view to route
-          if (map) {
-            const extent = source.getExtent()
-            map.getView().fit(extent, { padding: [50, 50, 50, 50], duration: 1000 })
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error calculating route:', error)
-    alert('Failed to calculate route')
-  }
-}
+const isCalculating = ref(false)
 
 const flyToLocation = (coords: { lat: number, lon: number }) => {
   if (!map) return
@@ -272,35 +90,259 @@ const getUserLocation = (isStartPoint = false) => {
     }
   )
 }
+
+// re-calculate route when selected mode changes
+watch(selectedMode, () => {
+  const selected = selectedMode.value
+  // if we already have the geometry, just redraw it; otherwise recalc
+  if (routeGeometries.value[selected]) {
+    drawRoute(routeGeometries.value[selected] || null, selected)
+  } else if (startPoint.value && endPoint.value) {
+    calculateRoute()
+  }
+})
+
+// helper translations and constants
+const OSRM_BASE = 'https://router.project-osrm.org'
+
+const locations = [
+  { name: 'home', label: 'Home', type: '🏠', coords: { lat: 37.7749, lon: -122.4194 } },
+  { name: 'work', label: 'Work', type: '🏢', coords: { lat: 37.7936, lon: -122.3930 } },
+  { name: 'museum', label: 'Museum', type: '🏛️', coords: { lat: 37.8000, lon: -122.4580 } },
+  { name: 'park', label: 'Park', type: '🌳', coords: { lat: 37.7694, lon: -122.4862 } }
+]
+
+const formatDuration = (seconds: number) => {
+  if (!seconds || seconds <= 0) return '--'
+  const mins = Math.round(seconds / 60)
+  if (mins < 60) return `${mins} ${t('maps.min')}`
+  const hrs = Math.floor(mins / 60)
+  const rem = mins % 60
+  return `${hrs} ${t('maps.hr')} ${rem} ${t('maps.min')}`
+}
+
+const getArrivalTime = (seconds: number) => {
+  const d = new Date(Date.now() + (seconds * 1000))
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+const fetchOsrmRoute = async (mode: 'driving' | 'cycling' | 'walking', start: [number, number], end: [number, number]) => {
+  // Map internal modes to OSRM profiles: driving->driving, cycling->bike, walking->foot
+  const profileMap: Record<string, string> = {
+    driving: 'driving',
+    cycling: 'bike',
+    walking: 'foot'
+  }
+  const profile = profileMap[mode]
+  const url = `${OSRM_BASE}/route/v1/${profile}/${start[0]},${start[1]};${end[0]},${end[1]}?overview=full&geometries=polyline&steps=false&alternatives=false&annotations=duration,distance`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('OSRM error')
+  const data = await res.json()
+  if (!data.routes || !data.routes[0]) return null
+  return {
+    duration: data.routes[0].duration as number,
+    distance: data.routes[0].distance as number,
+    geometry: data.routes[0].geometry as string
+  }
+}
+
+// Draw route on map based on mode
+const drawRoute = (encoded: string | null, mode: 'driving' | 'cycling' | 'walking') => {
+  if (!map || !routeLayer || !encoded) return
+  const source = routeLayer.getSource()
+  if (!source) return
+  source.clear()
+  const poly = new Polyline({ factor: 1e5 })
+  const feat = poly.readFeature(encoded, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' })
+  if (!feat) return
+  // style
+  let color = '#007aff'
+  if (mode === 'cycling') color = '#FF9F0A'
+  if (mode === 'walking') color = '#34C759'
+  feat.setStyle(new Style({ stroke: new Stroke({ color, width: 6 }) }))
+  source.addFeature(feat)
+  // fit view
+  const view = map.getView()
+  const geom = feat.getGeometry()
+  if (geom) {
+    const extent = geom.getExtent()
+    view.fit(extent, { padding: [40, 40, 40, 40], maxZoom: 16 })
+  }
+}
+
+const calculateRoute = async () => {
+  if (!startPoint.value || !endPoint.value) return
+  isCalculating.value = true
+  try {
+    // OSRM expects lon,lat -> our refs are lon,lat
+    const start = startPoint.value
+    const end = endPoint.value
+    const [dr, cy, wk] = await Promise.all([
+      fetchOsrmRoute('driving', start, end).catch(() => null),
+      fetchOsrmRoute('cycling', start, end).catch(() => null),
+      fetchOsrmRoute('walking', start, end).catch(() => null)
+    ])
+
+    const durations: any = {}
+    const arrivalTimes: any = {}
+    const distanceMeters = dr?.distance || cy?.distance || wk?.distance || 0
+  const distancestr = distanceMeters ? (distanceMeters < 1000 ? `${Math.round(distanceMeters)} m` : `${(distanceMeters / 1000).toFixed(1)} km`) : '--'
+
+    if (dr) {
+      durations.driving = formatDuration(dr.duration)
+      arrivalTimes.driving = getArrivalTime(dr.duration)
+      routeGeometries.value.driving = dr.geometry
+    }
+    if (cy) {
+      durations.cycling = formatDuration(cy.duration)
+      arrivalTimes.cycling = getArrivalTime(cy.duration)
+      routeGeometries.value.cycling = cy.geometry
+    }
+    if (wk) {
+      durations.walking = formatDuration(wk.duration)
+      arrivalTimes.walking = getArrivalTime(wk.duration)
+      routeGeometries.value.walking = wk.geometry
+    }
+
+    // Fallback approximations when OSRM doesn't provide a result
+    const approx = (dist: number, speedKmh: number) => {
+      if (!dist) return null
+      const hours = dist / 1000 / speedKmh
+      return Math.round(hours * 3600)
+    }
+    if (!dr && distanceMeters) {
+      const approxSec = approx(distanceMeters, 50) || 0
+      durations.driving = formatDuration(approxSec)
+      arrivalTimes.driving = getArrivalTime(approxSec)
+    }
+    if (!cy && distanceMeters) {
+      const approxSec = approx(distanceMeters, 15) || 0
+      durations.cycling = formatDuration(approxSec)
+      arrivalTimes.cycling = getArrivalTime(approxSec)
+    }
+    if (!wk && distanceMeters) {
+      const approxSec = approx(distanceMeters, 5) || 0
+      durations.walking = formatDuration(approxSec)
+      arrivalTimes.walking = getArrivalTime(approxSec)
+    }
+
+    routeInfo.value = {
+      distance: distancestr,
+      durations,
+      arrivalTimes
+    }
+
+    // Draw selected mode route geometry if available
+    const selected = selectedMode.value
+    if (selected === 'driving' && dr?.geometry) drawRoute(dr.geometry, 'driving')
+    else if (selected === 'cycling' && cy?.geometry) drawRoute(cy.geometry, 'cycling')
+    else if (selected === 'walking' && wk?.geometry) drawRoute(wk.geometry, 'walking')
+    else {
+      // draw whichever exists first
+      const anyGeom = dr?.geometry || cy?.geometry || wk?.geometry
+      if (anyGeom) drawRoute(anyGeom, selected)
+    }
+  } catch (err) {
+    console.error('route error', err)
+    alert('Failed to calculate route')
+  } finally {
+    isCalculating.value = false
+  }
+}
+
+const startNavigationMode = () => {
+  isNavigating.value = true
+  isSelectingEnd.value = true
+  // attempt to set start to user location
+  getUserLocation(true)
+}
+
+const cancelNavigation = () => {
+  isNavigating.value = false
+  isSelectingEnd.value = false
+  routeInfo.value = null
+  // clear route drawing
+  if (routeLayer && routeLayer.getSource()) routeLayer.getSource()!.clear()
+}
+
+onMounted(() => {
+  // initialize map
+  const tile = new TileLayer({ source: new OSM() })
+  userLocationLayer = new VectorLayer({ source: new VectorSource() })
+  routeLayer = new VectorLayer({ source: new VectorSource() })
+
+  map = new Map({
+    target: mapContainer.value || undefined,
+    layers: [tile, routeLayer, userLocationLayer],
+    view: new View({ center: fromLonLat([-122.4194, 37.7749]), zoom: 12 })
+  })
+
+  // map click handler for selecting end point when in navigation mode
+  map.on('singleclick', (evt) => {
+    if (!isNavigating.value) return
+    const coords = toLonLat(evt.coordinate)
+    // coords returns lon, lat; convert to [lon, lat]
+    endPoint.value = [coords[0], coords[1]]
+    isSelectingEnd.value = false
+    calculateRoute()
+  })
+})
+
+onUnmounted(() => {
+  if (map) map.setTarget(undefined)
+})
 </script>
 
 <template>
   <div class="maps-container">
     <div class="sidebar">
-      <div class="search-bar">
-        <span class="search-icon">🔍</span>
-        <input v-model="searchQuery" placeholder="Search Maps" />
-      </div>
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input v-model="searchQuery" :placeholder="t('maps.search')" />
+          </div>
       
       <div v-if="isNavigating" class="nav-panel">
         <div class="nav-header">
-          <h3>Directions</h3>
-          <button class="close-btn" @click="cancelNavigation">Done</button>
+          <div class="header-left">
+            <h3>{{ t('maps.directions') }}</h3>
+            <div v-if="isCalculating" class="spinner" aria-hidden="true" :title="t('maps.calculating')"></div>
+          </div>
+          <button class="close-btn" @click="cancelNavigation">{{ t('maps.done') }}</button>
+        </div>
+
+        <div class="mode-buttons">
+          <button class="mode-btn" :class="{ active: selectedMode === 'driving' }" @click="selectedMode = 'driving'">🚗 {{ t('maps.drive') }}</button>
+          <button class="mode-btn" :class="{ active: selectedMode === 'cycling' }" @click="selectedMode = 'cycling'">🚴 {{ t('maps.cycle') }}</button>
+          <button class="mode-btn" :class="{ active: selectedMode === 'walking' }" @click="selectedMode = 'walking'">🚶 {{ t('maps.walk') }}</button>
         </div>
         
         <div class="route-info" v-if="routeInfo">
-          <div class="stat-card">
-            <div class="stat-value">{{ (routeInfo as any)?.duration }}</div>
-            <div class="stat-label">Est. Time</div>
+            <div class="mode-card mode-driving" :class="{ selected: selectedMode === 'driving' }" @click="selectedMode = 'driving'" @keyup.enter="selectedMode = 'driving'" role="button" tabindex="0" :aria-pressed="selectedMode === 'driving'" :title="t('maps.drive')">
+            <div class="mode-icon">🚗</div>
+            <div class="stat-value">{{ (routeInfo as any)?.durations.driving }}</div>
+            <div class="stat-sub">{{ t('maps.drive') }}</div>
+            <div class="stat-arrival">{{ t('maps.arrivalTime') }} • {{ (routeInfo as any)?.arrivalTimes.driving }}</div>
           </div>
-          <div class="stat-card">
+          <div class="mode-card mode-cycling" :class="{ selected: selectedMode === 'cycling' }" @click="selectedMode = 'cycling'" @keyup.enter="selectedMode = 'cycling'" role="button" tabindex="0" :aria-pressed="selectedMode === 'cycling'" :title="t('maps.cycle')">
+            <div class="mode-icon">🚴</div>
+            <div class="stat-value">{{ (routeInfo as any)?.durations.cycling }}</div>
+            <div class="stat-sub">{{ t('maps.cycle') }}</div>
+            <div class="stat-arrival">{{ t('maps.arrivalTime') }} • {{ (routeInfo as any)?.arrivalTimes.cycling }}</div>
+          </div>
+          <div class="mode-card mode-walking" :class="{ selected: selectedMode === 'walking' }" @click="selectedMode = 'walking'" @keyup.enter="selectedMode = 'walking'" role="button" tabindex="0" :aria-pressed="selectedMode === 'walking'" :title="t('maps.walk')">
+            <div class="mode-icon">🚶</div>
+            <div class="stat-value">{{ (routeInfo as any)?.durations.walking }}</div>
+            <div class="stat-sub">{{ t('maps.walk') }}</div>
+            <div class="stat-arrival">{{ t('maps.arrivalTime') }} • {{ (routeInfo as any)?.arrivalTimes.walking }}</div>
+          </div>
+          <div class="stat-card distance-card">
             <div class="stat-value">{{ (routeInfo as any)?.distance }}</div>
-            <div class="stat-label">Distance</div>
+            <div class="stat-label">{{ t('maps.distance') }}</div>
           </div>
         </div>
-        <div class="instruction" v-else>
-          <p>Select a destination on the map</p>
-          <div class="loading" v-if="startPoint && endPoint">Calculating...</div>
+          <div class="instruction" v-else>
+          <p>{{ t('maps.selectDest') }}</p>
+          <div class="loading" v-if="isCalculating">{{ t('maps.calculating') }}</div>
         </div>
       </div>
 
@@ -319,7 +361,7 @@ const getUserLocation = (isStartPoint = false) => {
           </div>
         </div>
 
-        <div class="section-title">Favorites</div>
+  <div class="section-title">{{ t('maps.favorites') }}</div>
         <div class="location-item" @click="flyToLocation(locations[0].coords)">
           <span class="icon">{{ locations[0].type }}</span>
           <div class="info">
@@ -335,7 +377,7 @@ const getUserLocation = (isStartPoint = false) => {
           </div>
         </div>
 
-        <div class="section-title" style="margin-top: 15px;">Guides</div>
+  <div class="section-title" style="margin-top: 15px;">{{ t('maps.guides') }}</div>
         <div 
           v-for="loc in locations.slice(2)" 
           :key="loc.name" 
@@ -345,7 +387,7 @@ const getUserLocation = (isStartPoint = false) => {
           <span class="icon">{{ loc.type }}</span>
           <div class="info">
             <div class="name">{{ loc.label }}</div>
-            <div class="sub">City Guide</div>
+              <div class="sub">{{ t('maps.cityGuide') }}</div>
           </div>
         </div>
       </div>
@@ -361,37 +403,37 @@ const getUserLocation = (isStartPoint = false) => {
   display: flex;
   height: 100%;
   background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .sidebar {
-  width: 280px;
-  background: linear-gradient(180deg, #fafafa 0%, #f2f6f9 100%);
-  border-right: 1px solid #e6e9ee;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  gap: 10px;
-  z-index: 1; /* Ensure sidebar is above map if needed */
-  box-shadow: 0 6px 24px rgba(20,20,20,0.06);
-  border-radius: 10px 0 0 10px;
+  padding: 16px;
+  gap: 12px;
+  z-index: 2;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
 }
 
 .search-bar {
-  background: #e3e3e8;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: rgba(118, 118, 128, 0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
-  border: 1px solid transparent;
+  margin-bottom: 12px;
   transition: all 0.2s;
 }
 
 .search-bar:focus-within {
   background: #fff;
-  border-color: #007aff;
-  box-shadow: 0 0 0 3px rgba(0,122,255,0.2);
+  box-shadow: 0 0 0 2px #007aff;
 }
 
 .search-bar input {
@@ -399,39 +441,40 @@ const getUserLocation = (isStartPoint = false) => {
   background: transparent;
   outline: none;
   width: 100%;
-  font-size: 13px;
-  color: #333;
+  font-size: 14px;
+  color: #1d1d1f;
 }
 
 .search-icon {
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.5;
 }
 
 .section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #86868b;
-  margin-bottom: 5px;
-  padding-left: 10px;
+  margin: 16px 0 8px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .location-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .location-item:hover {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .icon {
-  font-size: 18px;
+  font-size: 20px;
   width: 24px;
   text-align: center;
 }
@@ -442,19 +485,19 @@ const getUserLocation = (isStartPoint = false) => {
 }
 
 .name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #1d1d1f;
 }
 
 .sub {
-  font-size: 11px;
+  font-size: 12px;
   color: #86868b;
 }
 
 .map-view {
   flex: 1;
-  background: #000;
+  background: #f5f5f7;
   position: relative;
   overflow: hidden;
 }
@@ -465,7 +508,7 @@ const getUserLocation = (isStartPoint = false) => {
 }
 
 .action-buttons {
-  padding: 0 10px 15px 10px;
+  padding: 0 4px 12px 4px;
 }
 
 .nav-start-btn {
@@ -473,15 +516,16 @@ const getUserLocation = (isStartPoint = false) => {
   background: #007aff;
   color: white;
   border: none;
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+  transition: background 0.2s;
 }
 
 .nav-start-btn:hover {
@@ -489,8 +533,8 @@ const getUserLocation = (isStartPoint = false) => {
 }
 
 .nav-panel {
-  padding: 10px;
-  background: #f5f5f7;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
@@ -498,14 +542,21 @@ const getUserLocation = (isStartPoint = false) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .nav-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
-  color: #111827;
+  color: #1d1d1f;
 }
 
 .close-btn {
@@ -514,46 +565,166 @@ const getUserLocation = (isStartPoint = false) => {
   color: #007aff;
   font-weight: 600;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
+  padding: 4px 8px;
+  border-radius: 6px;
 }
 
+.close-btn:hover {
+  background: rgba(0, 122, 255, 0.1);
+}
+
+/* Mode Buttons - Segmented Control */
+.mode-buttons {
+  display: flex;
+  background: rgba(118, 118, 128, 0.12);
+  padding: 2px;
+  border-radius: 9px;
+  margin-bottom: 20px;
+}
+
+.mode-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.mode-btn.active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+  color: #007aff;
+}
+
+/* Route Info Cards */
 .route-info {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 20px;
 }
 
-.stat-card {
-  background: white;
-  padding: 12px;
+.mode-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
-  text-align: center;
-  box-shadow: 0 6px 20px rgba(2,6,23,0.06);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
 }
-.stat-card:hover { transform: translateY(-3px); }
 
-.stat-value {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f1724;
+.mode-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.mode-card.selected {
+  border-color: #007aff;
+  background: #f0f7ff;
+  box-shadow: 0 0 0 1px #007aff;
+}
+
+.mode-icon {
+  font-size: 24px;
   margin-bottom: 6px;
 }
 
-.stat-label {
-  font-size: 12px;
-  color: #6b7280;
+.stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+  line-height: 1.2;
 }
 
-.loading { color: #9aa2ac; font-size: 12px; margin-top: 10px; }
+.stat-sub {
+  font-size: 11px;
+  color: #86868b;
+  margin-top: 2px;
+}
 
+.stat-arrival {
+  font-size: 10px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Specific Mode Colors */
+.mode-card.mode-driving.selected .mode-icon,
+.mode-card.mode-driving.selected .stat-value { color: #007aff; }
+
+.mode-card.mode-cycling.selected .mode-icon,
+.mode-card.mode-cycling.selected .stat-value { color: #ff9500; }
+
+.mode-card.mode-walking.selected .mode-icon,
+.mode-card.mode-walking.selected .stat-value { color: #34c759; }
+
+/* Distance Card */
 .distance-card {
   grid-column: 1 / -1;
-  padding: 14px 8px;
+  background: #f5f5f7;
   border-radius: 12px;
-  background: #f8fbff;
-  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.02);
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.distance-card .stat-value {
+  font-size: 16px;
+  margin: 0;
+}
+
+.distance-card .stat-label {
+  font-size: 13px;
+  color: #86868b;
+}
+
+/* Spinner */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0, 122, 255, 0.1);
+  border-top-color: #007aff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading {
+  color: #86868b;
+  font-size: 13px;
+  margin-top: 16px;
+  text-align: center;
 }
 
 .instruction {
@@ -561,5 +732,28 @@ const getUserLocation = (isStartPoint = false) => {
   color: #86868b;
   font-size: 14px;
   margin-top: 40px;
+  padding: 0 20px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .sidebar { width: 100%; height: 40%; border-right: none; border-bottom: 1px solid #e6e9ee; }
+  .maps-container { flex-direction: column-reverse; }
+  .route-info { grid-template-columns: 1fr; }
+  .mode-card {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 12px 16px;
+    text-align: left;
+  }
+  .mode-icon { margin-bottom: 0; margin-right: 12px; font-size: 20px; }
+  .stat-arrival {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+    width: auto;
+    text-align: right;
+  }
+  .stat-value { font-size: 16px; }
 }
 </style>
