@@ -170,14 +170,18 @@ onUnmounted(() => {
   <div 
     ref="windowRef"
     class="window"
+    :data-window-id="id"
     :class="{ active: isActive, maximized: isMaximized, transparent: transparent }"
     :style="!isMaximized ? { 
-      transform: `translate(${localX}px, ${localY}px)`,
+      transform: `translate(${localX}px, ${localY}px) translate(var(--minimize-x, 0px), var(--minimize-y, 0px)) scale(var(--window-scale, 1))`,
+      opacity: 'var(--window-opacity, 1)',
       zIndex: zIndex,
       width: `${localWidth}px`,
       height: `${localHeight}px`
     } : {
-      zIndex: zIndex
+      zIndex: zIndex,
+      transform: `scale(var(--window-scale, 1))`,
+      opacity: 'var(--window-opacity, 1)'
     }"
     @mousedown="emit('focus', id)"
   >
@@ -231,14 +235,14 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(0,0,0,0.1);
-  transition: box-shadow 0.2s, width 0.05s, height 0.05s, transform 0.05s;
-  pointer-events: auto; /* Enable interactions */
+  transition: box-shadow 0.2s, width 0.1s, height 0.1s; /* Removed transform transition to prevent conflict with animations */
+  pointer-events: auto;
 }
 
 .window.maximized {
   width: 100% !important;
   height: 100% !important;
-  transform: translate(0, 0) !important;
+  transform: translate(0, 0) scale(var(--window-scale, 1)) !important;
   border-radius: 0;
   border: none;
   transition: all 0.3s ease;

@@ -14,6 +14,8 @@ const translations = {
       games: 'Game Center',
       weather: 'Weather',
       settings: 'Settings',
+      chatbot: 'AI Assistant',
+      calendar: 'Calendar',
       trash: 'Trash',
       launchpad: 'Launchpad'
     },
@@ -101,6 +103,17 @@ const translations = {
       back: 'Back',
       forward: 'Forward',
       refresh: 'Refresh'
+    },
+    calendar: {
+      months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      home: 'Home',
+      work: 'Work',
+      family: 'Family',
+      month: 'Month',
+      week: 'Week',
+      day: 'Day',
+      today: 'Today'
     }
   },
   zh: {
@@ -114,6 +127,8 @@ const translations = {
       games: '游戏中心',
       weather: '天气',
       settings: '设置',
+      chatbot: 'AI助手',
+      calendar: '日历',
       trash: '废纸篓',
       launchpad: '启动台'
     },
@@ -201,6 +216,17 @@ const translations = {
       back: '后退',
       forward: '前进',
       refresh: '刷新'
+    },
+    calendar: {
+      months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+      weekDays: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+      home: '家庭',
+      work: '工作',
+      family: '家人',
+      month: '月',
+      week: '周',
+      day: '日',
+      today: '今天'
     }
   }
 }

@@ -8,6 +8,8 @@ import Maps from './components/apps/Maps.vue'
 import Games from './components/apps/Games/index.vue'
 import Weather from './components/apps/Weather.vue'
 import Settings from './components/apps/Settings/index.vue'
+import ChatBot from './components/apps/ChatBot/index.vue'
+import Calendar from './components/apps/Calendar.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { useI18n } from './composables/useI18n'
 
@@ -39,6 +41,8 @@ const windows = ref<WindowState[]>([
   { id: 'games', title: 'Game Center', isOpen: false, isMinimized: false, x: 400, y: 150, width: 800, height: 600, zIndex: 7, content: 'Games App', transparent: true },
   { id: 'weather', title: 'Weather', isOpen: false, isMinimized: false, x: 450, y: 200, width: 400, height: 500, zIndex: 8, content: 'Weather App', transparent: true },
   { id: 'settings', title: 'Settings', isOpen: false, isMinimized: false, x: 400, y: 400, width: 600, height: 400, zIndex: 9, content: 'Settings App' },
+  { id: 'chatbot', title: 'AI Assistant', isOpen: false, isMinimized: false, x: 500, y: 100, width: 380, height: 600, zIndex: 10, content: 'AI ChatBot' },
+  { id: 'calendar', title: 'Calendar', isOpen: false, isMinimized: false, x: 200, y: 150, width: 800, height: 600, zIndex: 11, content: 'Calendar App' },
 ])
 
 const activeWindowId = ref<string>('finder')
@@ -148,6 +152,33 @@ const openWindow = (id: string) => {
     }
   }
 }
+
+const onBeforeLeave = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  const id = htmlEl.dataset.windowId
+  if (!id) return
+
+  const dockIcon = document.getElementById(`dock-app-${id}`)
+  if (dockIcon) {
+    const iconRect = dockIcon.getBoundingClientRect()
+    const winRect = htmlEl.getBoundingClientRect()
+
+    const iconCenterX = iconRect.left + iconRect.width / 2
+    const iconCenterY = iconRect.top + iconRect.height / 2
+
+    const winCenterX = winRect.left + winRect.width / 2
+    const winCenterY = winRect.top + winRect.height / 2
+
+    const dx = iconCenterX - winCenterX
+    const dy = iconCenterY - winCenterY
+
+    htmlEl.style.setProperty('--target-x', `${dx}px`)
+    htmlEl.style.setProperty('--target-y', `${dy}px`)
+  } else {
+    htmlEl.style.setProperty('--target-x', `0px`)
+    htmlEl.style.setProperty('--target-y', `200px`)
+  }
+}
 </script>
 
 <template>
@@ -155,108 +186,119 @@ const openWindow = (id: string) => {
     <MenuBar />
     
     <div class="windows-container">
-      <Window 
-        v-for="win in windows" 
-        :key="win.id"
-        v-show="win.isOpen && !win.isMinimized"
-        :id="win.id"
-        :title="t(`system.${win.id}`)"
-        v-model:x="win.x"
-        v-model:y="win.y"
-        v-model:width="win.width"
-        v-model:height="win.height"
-        :z-index="win.zIndex"
-        :is-active="activeWindowId === win.id"
-        :transparent="win.transparent"
-        @focus="focusWindow"
-        @close="closeWindow"
-        @minimize="minimizeWindow"
+      <TransitionGroup 
+        name="window-anim"
+        @before-leave="onBeforeLeave"
       >
-        <div class="window-content">
-          <div v-if="win.id === 'finder'" class="finder-content">
-            <div class="sidebar">
-              <div class="sidebar-item active">Recents</div>
-              <div class="sidebar-item">Applications</div>
-              <div class="sidebar-item">Desktop</div>
-              <div class="sidebar-item">Documents</div>
-              <div class="sidebar-item">Downloads</div>
-            </div>
-            <div class="main-area">
-              <div class="file-grid">
-                <div class="file-item">📁 Project A</div>
-                <div class="file-item">📄 Resume.pdf</div>
-                <div class="file-item">🖼️ Photo.jpg</div>
+        <Window 
+          v-for="win in windows" 
+          :key="win.id"
+          v-show="win.isOpen && !win.isMinimized"
+          :id="win.id"
+          :title="t(`system.${win.id}`)"
+          v-model:x="win.x"
+          v-model:y="win.y"
+          v-model:width="win.width"
+          v-model:height="win.height"
+          :z-index="win.zIndex"
+          :is-active="activeWindowId === win.id"
+          :transparent="win.transparent"
+          @focus="focusWindow"
+          @close="closeWindow"
+          @minimize="minimizeWindow"
+        >
+          <div class="window-content">
+            <div v-if="win.id === 'finder'" class="finder-content">
+              <div class="sidebar">
+                <div class="sidebar-item active">Recents</div>
+                <div class="sidebar-item">Applications</div>
+                <div class="sidebar-item">Desktop</div>
+                <div class="sidebar-item">Documents</div>
+                <div class="sidebar-item">Downloads</div>
               </div>
-            </div>
-          </div>
-          <div v-else-if="win.id === 'safari'" class="safari-content">
-            <Safari />
-          </div>
-          <div v-else-if="win.id === 'messages'" class="messages-content">
-            <div class="msg-sidebar">
-              <div class="msg-item active">
-                <div class="avatar">👤</div>
-                <div class="msg-info">
-                  <div class="name">John Doe</div>
-                  <div class="preview">Hey, how are you?</div>
-                </div>
-              </div>
-              <div class="msg-item">
-                <div class="avatar">👩</div>
-                <div class="msg-info">
-                  <div class="name">Jane Smith</div>
-                  <div class="preview">Meeting at 3pm</div>
+              <div class="main-area">
+                <div class="file-grid">
+                  <div class="file-item">📁 Project A</div>
+                  <div class="file-item">📄 Resume.pdf</div>
+                  <div class="file-item">🖼️ Photo.jpg</div>
                 </div>
               </div>
             </div>
-            <div class="msg-main">
-              <div class="msg-bubble received">Hey, how are you?</div>
-              <div class="msg-bubble sent">I'm good, thanks! Working on this macOS clone.</div>
+            <div v-else-if="win.id === 'safari'" class="safari-content">
+              <Safari />
             </div>
-          </div>
-          <div v-else-if="win.id === 'mail'" class="mail-content">
-            <div class="mail-sidebar">
-              <div class="mail-item active">
-                <div class="sender">Apple</div>
-                <div class="subject">Your receipt</div>
+            <div v-else-if="win.id === 'messages'" class="messages-content">
+              <div class="msg-sidebar">
+                <div class="msg-item active">
+                  <div class="avatar">👤</div>
+                  <div class="msg-info">
+                    <div class="name">John Doe</div>
+                    <div class="preview">Hey, how are you?</div>
+                  </div>
+                </div>
+                <div class="msg-item">
+                  <div class="avatar">👩</div>
+                  <div class="msg-info">
+                    <div class="name">Jane Smith</div>
+                    <div class="preview">Meeting at 3pm</div>
+                  </div>
+                </div>
               </div>
-              <div class="mail-item">
-                <div class="sender">GitHub</div>
-                <div class="subject">New comment on issue</div>
-              </div>
-            </div>
-            <div class="mail-main">
-              <h2>Your receipt</h2>
-              <div class="mail-meta">From: Apple &lt;no-reply@apple.com&gt;</div>
-              <div class="mail-body">
-                Thank you for your purchase.
-              </div>
-            </div>
-          </div>
-          <div v-else-if="win.id === 'photos'" class="photos-content">
-            <div class="photo-grid">
-              <div class="photo-item" v-for="i in 12" :key="i">
-                <div class="photo-placeholder">IMG_{{i}}</div>
+              <div class="msg-main">
+                <div class="msg-bubble received">Hey, how are you?</div>
+                <div class="msg-bubble sent">I'm good, thanks! Working on this macOS clone.</div>
               </div>
             </div>
+            <div v-else-if="win.id === 'mail'" class="mail-content">
+              <div class="mail-sidebar">
+                <div class="mail-item active">
+                  <div class="sender">Apple</div>
+                  <div class="subject">Your receipt</div>
+                </div>
+                <div class="mail-item">
+                  <div class="sender">GitHub</div>
+                  <div class="subject">New comment on issue</div>
+                </div>
+              </div>
+              <div class="mail-main">
+                <h2>Your receipt</h2>
+                <div class="mail-meta">From: Apple &lt;no-reply@apple.com&gt;</div>
+                <div class="mail-body">
+                  Thank you for your purchase.
+                </div>
+              </div>
+            </div>
+            <div v-else-if="win.id === 'photos'" class="photos-content">
+              <div class="photo-grid">
+                <div class="photo-item" v-for="i in 12" :key="i">
+                  <div class="photo-placeholder">IMG_{{i}}</div>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="win.id === 'maps'" class="maps-content">
+              <Maps />
+            </div>
+            <div v-else-if="win.id === 'games'" class="games-content">
+              <Games />
+            </div>
+            <div v-else-if="win.id === 'weather'" class="weather-wrapper">
+              <Weather />
+            </div>
+            <div v-else-if="win.id === 'settings'" class="settings-content">
+               <Settings :wallpaper="currentWallpaper" @update:wallpaper="currentWallpaper = $event" />
+            </div>
+            <div v-else-if="win.id === 'chatbot'" class="chatbot-content">
+              <ChatBot />
+            </div>
+            <div v-else-if="win.id === 'calendar'" class="calendar-content">
+              <Calendar />
+            </div>
+            <div v-else>
+              {{ win.content }}
+            </div>
           </div>
-          <div v-else-if="win.id === 'maps'" class="maps-content">
-            <Maps />
-          </div>
-          <div v-else-if="win.id === 'games'" class="games-content">
-            <Games />
-          </div>
-          <div v-else-if="win.id === 'weather'" class="weather-wrapper">
-            <Weather />
-          </div>
-          <div v-else-if="win.id === 'settings'" class="settings-content">
-             <Settings :wallpaper="currentWallpaper" @update:wallpaper="currentWallpaper = $event" />
-          </div>
-          <div v-else>
-            {{ win.content }}
-          </div>
-        </div>
-      </Window>
+        </Window>
+      </TransitionGroup>
     </div>
 
     <!-- Launchpad Overlay -->
@@ -298,6 +340,14 @@ const openWindow = (id: string) => {
           <div class="lp-icon">⚙️</div>
           <div class="lp-name">{{ t('system.settings') }}</div>
         </div>
+        <div class="launchpad-item" @click.stop="openWindow('chatbot')">
+          <div class="lp-icon">🤖</div>
+          <div class="lp-name">{{ t('system.chatbot') }}</div>
+        </div>
+        <div class="launchpad-item" @click.stop="openWindow('calendar')">
+          <div class="lp-icon">📅</div>
+          <div class="lp-name">{{ t('system.calendar') }}</div>
+        </div>
         <!-- Extra dummy apps to fill space -->
         <div class="launchpad-item">
           <div class="lp-icon">🎵</div>
@@ -307,9 +357,9 @@ const openWindow = (id: string) => {
           <div class="lp-icon">📝</div>
           <div class="lp-name">Notes</div>
         </div>
-        <div class="launchpad-item">
+        <div class="launchpad-item" @click.stop="openWindow('calendar')">
           <div class="lp-icon">📅</div>
-          <div class="lp-name">Calendar</div>
+          <div class="lp-name">{{ t('system.calendar') }}</div>
         </div>
         <div class="launchpad-item">
           <div class="lp-icon">🧮</div>
@@ -423,6 +473,31 @@ const openWindow = (id: string) => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+/* Window Animation */
+.window-anim-enter-active,
+.window-anim-leave-active {
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease !important;
+  will-change: transform, opacity;
+}
+
+.window-anim-enter-from {
+  --window-scale: 0.9;
+  --window-opacity: 0;
+}
+
+.window-anim-leave-to {
+  --window-scale: 0;
+  --window-opacity: 0;
+  --minimize-x: var(--target-x);
+  --minimize-y: var(--target-y);
+}
+
+.window-anim-enter-to,
+.window-anim-leave-from {
+  --window-scale: 1;
+  --window-opacity: 1;
 }
 
 /* Finder Styles */
@@ -629,6 +704,17 @@ const openWindow = (id: string) => {
 
 /* Games Wrapper */
 .games-content {
+  height: 100%;
+}
+
+/* ChatBot Styles */
+.chatbot-content {
+  height: 100%;
+  background: #fff;
+}
+
+/* Calendar Styles */
+.calendar-content {
   height: 100%;
 }
 </style>

@@ -44,6 +44,7 @@ watchEffect(() => {
         v-for="app in apps" 
         :key="app.id" 
         class="dock-item"
+        :id="`dock-app-${app.id}`"
         @click="emit('open-app', app.id)"
       >
         <div class="icon-box">
