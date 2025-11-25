@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import Dock from './components/Dock.vue'
 import Window from './components/Window.vue'
@@ -15,7 +15,13 @@ import { useI18n } from './composables/useI18n'
 
 const { t } = useI18n()
 
-const currentWallpaper = ref('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')
+const savedWallpaper = localStorage.getItem('wallpaper')
+const defaultWallpaper = 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80'
+const currentWallpaper = ref(savedWallpaper || defaultWallpaper)
+
+watch(currentWallpaper, (newVal) => {
+  localStorage.setItem('wallpaper', newVal)
+})
 
 interface WindowState {
   id: string
